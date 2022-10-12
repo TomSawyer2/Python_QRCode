@@ -1,0 +1,10 @@
+*.pyc
+.tox
+dist/
+.coverage
+.coverage.*
+build/
+.pytest_cache/
+.idea/
+.vscode/
+cov.xml
