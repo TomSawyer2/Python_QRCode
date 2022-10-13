@@ -1,9 +1,8 @@
 import math
 import re
 from typing import List
-
-import LUT, base
-from base import RSBlock
+import LUT, polynomial
+from polynomial import Polynomial
 
 # QR encoding modes.
 MODE_NUMBER = 1 << 0
@@ -97,36 +96,36 @@ PAD0 = 0xEC
 PAD1 = 0x11
 
 
-# Precompute bit count limits, indexed by error correction level and code size
-def _data_count(block):
-    return block.data_count
+# Precompute bit count limits for each version.
+def dataCount(block):
+    return block.dataCount
 
 
 BIT_LIMIT_TABLE = [
     [0]
     + [
-        8 * sum(map(_data_count, base.rs_blocks(version)))
+        8 * sum(map(dataCount, polynomial.rsBlocks(version)))
         for version in range(1, 41)
     ]
 ]
 
 
-def BCH_type_info(data):
+def BCHTypeInfo(data):
     d = data << 10
-    while BCH_digit(d) - BCH_digit(G15) >= 0:
-        d ^= G15 << (BCH_digit(d) - BCH_digit(G15))
+    while BCHDigit(d) - BCHDigit(G15) >= 0:
+        d ^= G15 << (BCHDigit(d) - BCHDigit(G15))
 
     return ((data << 10) | d) ^ G15_MASK
 
 
 def BCH_type_number(data):
     d = data << 12
-    while BCH_digit(d) - BCH_digit(G18) >= 0:
-        d ^= G18 << (BCH_digit(d) - BCH_digit(G18))
+    while BCHDigit(d) - BCHDigit(G18) >= 0:
+        d ^= G18 << (BCHDigit(d) - BCHDigit(G18))
     return (data << 12) | d
 
 
-def BCH_digit(data):
+def BCHDigit(data):
     digit = 0
     while data != 0:
         digit += 1
@@ -134,13 +133,15 @@ def BCH_digit(data):
     return digit
 
 
-def pattern_position(version):
+def patternPosition(version):
     return PATTERN_POSITION_TABLE[version - 1]
 
 
-def mask_func(pattern):
+def getMaskFunc(pattern):
     """
     Return the mask function for the given mask pattern.
+    :param pattern: Mask pattern (0-7)
+    :return: Mask function
     """
     if pattern == 0:  # 000
         return lambda i, j: (i + j) % 2 == 0
@@ -158,10 +159,11 @@ def mask_func(pattern):
         return lambda i, j: ((i * j) % 2 + (i * j) % 3) % 2 == 0
     if pattern == 7:  # 111
         return lambda i, j: ((i * j) % 3 + (i + j) % 2) % 2 == 0
-    raise TypeError("Bad mask pattern: " + pattern)  # pragma: no cover
+    print("bad mask pattern: %s" % pattern)
+    return None
 
 
-def mode_sizes_for_version(version):
+def getModeSizesForVersion(version):
     if version < 10:
         return MODE_SIZE_SMALL
     elif version < 27:
@@ -170,152 +172,140 @@ def mode_sizes_for_version(version):
         return MODE_SIZE_LARGE
 
 
-def length_in_bits(mode, version):
+def getLengthInBits(mode, version):
     if mode not in (MODE_NUMBER, MODE_ALPHA_NUM, MODE_8BIT_BYTE, MODE_KANJI):
-        raise TypeError(f"Invalid mode ({mode})")  # pragma: no cover
+        print("Invalid mode: %s" % mode)
+        return 0
 
-    check_version(version)
+    checkVersion(version)
 
-    return mode_sizes_for_version(version)[mode]
+    return getModeSizesForVersion(version)[mode]
 
 
-def check_version(version):
+def checkVersion(version):
     if version < 1 or version > 40:
-        raise ValueError(f"Invalid version (was {version}, expected 1 to 40)")
+        print("Invalid version: %s" % version)
+        return False
 
 
-def lost_point(modules):
+def lostPoint(modules):
     
-    modules_count = len(modules)
+    modulesCount = len(modules)
 
-    lost_point = 0
+    lostPoint = 0
 
-    lost_point = _lost_point_level1(modules, modules_count)
-    lost_point += _lost_point_level2(modules, modules_count)
-    lost_point += _lost_point_level3(modules, modules_count)
-    lost_point += _lost_point_level4(modules, modules_count)
+    lostPoint = lostPointLevelA(modules, modulesCount)
+    lostPoint += lostPointLevelB(modules, modulesCount)
+    lostPoint += lostPointLevelC(modules, modulesCount)
+    lostPoint += lostPointLevelD(modules, modulesCount)
 
-    return lost_point
+    return lostPoint
 
 
-def _lost_point_level1(modules, modules_count):
-    lost_point = 0
+def lostPointLevelA(modules, modulesCount):
+    lostPoint = 0
 
-    modules_range = range(modules_count)
-    container = [0] * (modules_count + 1)
+    modulesRange = range(modulesCount)
+    container = [0] * (modulesCount + 1)
 
-    for row in modules_range:
-        this_row = modules[row]
-        previous_color = this_row[0]
+    for row in modulesRange:
+        currentRow = modules[row]
+        previousColor = currentRow[0]
         length = 0
-        for col in modules_range:
-            if this_row[col] == previous_color:
+        for col in modulesRange:
+            if currentRow[col] == previousColor:
                 length += 1
             else:
                 if length >= 5:
                     container[length] += 1
                 length = 1
-                previous_color = this_row[col]
+                previousColor = currentRow[col]
         if length >= 5:
             container[length] += 1
 
-    for col in modules_range:
-        previous_color = modules[0][col]
+    for col in modulesRange:
+        previousColor = modules[0][col]
         length = 0
-        for row in modules_range:
-            if modules[row][col] == previous_color:
+        for row in modulesRange:
+            if modules[row][col] == previousColor:
                 length += 1
             else:
                 if length >= 5:
                     container[length] += 1
                 length = 1
-                previous_color = modules[row][col]
+                previousColor = modules[row][col]
         if length >= 5:
             container[length] += 1
 
-    lost_point += sum(
-        container[each_length] * (each_length - 2)
-        for each_length in range(5, modules_count + 1)
+    lostPoint += sum(
+        container[eachLength] * (eachLength - 2)
+        for eachLength in range(5, modulesCount + 1)
     )
 
-    return lost_point
+    return lostPoint
 
 
-def _lost_point_level2(modules, modules_count):
-    lost_point = 0
+def lostPointLevelB(modules, modulesCount):
+    lostPoint = 0
 
-    modules_range = range(modules_count - 1)
-    for row in modules_range:
-        this_row = modules[row]
-        next_row = modules[row + 1]
-        # use iter() and next() to skip next four-block. e.g.
-        # d a f   if top-right a != b botton-right,
-        # c b e   then both abcd and abef won't lost any point.
-        modules_range_iter = iter(modules_range)
-        for col in modules_range_iter:
-            top_right = this_row[col + 1]
-            if top_right != next_row[col + 1]:
-                # reduce 33.3% of runtime via next().
-                # None: raise nothing if there is no next item.
-                next(modules_range_iter, None)
-            elif top_right != this_row[col]:
+    modulesRange = range(modulesCount - 1)
+    for row in modulesRange:
+        currentRow = modules[row]
+        nextRow = modules[row + 1]
+        modulesRange_iter = iter(modulesRange)
+        for col in modulesRange_iter:
+            topRight = currentRow[col + 1]
+            if topRight != nextRow[col + 1]:
+                next(modulesRange_iter, None)
+            elif topRight != currentRow[col]:
                 continue
-            elif top_right != next_row[col]:
+            elif topRight != nextRow[col]:
                 continue
             else:
-                lost_point += 3
+                lostPoint += 3
 
-    return lost_point
+    return lostPoint
 
 
-def _lost_point_level3(modules, modules_count):
-    # 1 : 1 : 3 : 1 : 1 ratio (dark:light:dark:light:dark) pattern in
-    # row/column, preceded or followed by light area 4 modules wide. From ISOIEC.
-    # pattern1:     10111010000
-    # pattern2: 00001011101
-    modules_range = range(modules_count)
-    modules_range_short = range(modules_count - 10)
-    lost_point = 0
+def lostPointLevelC(modules, modulesCount):
+    modulesRange = range(modulesCount)
+    modulesRange_short = range(modulesCount - 10)
+    lostPoint = 0
 
-    for row in modules_range:
-        this_row = modules[row]
-        modules_range_short_iter = iter(modules_range_short)
+    for row in modulesRange:
+        currentRow = modules[row]
+        modulesRangeShortIter = iter(modulesRange_short)
         col = 0
-        for col in modules_range_short_iter:
+        for col in modulesRangeShortIter:
             if (
-                not this_row[col + 1]
-                and this_row[col + 4]
-                and not this_row[col + 5]
-                and this_row[col + 6]
-                and not this_row[col + 9]
+                not currentRow[col + 1]
+                and currentRow[col + 4]
+                and not currentRow[col + 5]
+                and currentRow[col + 6]
+                and not currentRow[col + 9]
                 and (
-                    this_row[col + 0]
-                    and this_row[col + 2]
-                    and this_row[col + 3]
-                    and not this_row[col + 7]
-                    and not this_row[col + 8]
-                    and not this_row[col + 10]
-                    or not this_row[col + 0]
-                    and not this_row[col + 2]
-                    and not this_row[col + 3]
-                    and this_row[col + 7]
-                    and this_row[col + 8]
-                    and this_row[col + 10]
+                    currentRow[col + 0]
+                    and currentRow[col + 2]
+                    and currentRow[col + 3]
+                    and not currentRow[col + 7]
+                    and not currentRow[col + 8]
+                    and not currentRow[col + 10]
+                    or not currentRow[col + 0]
+                    and not currentRow[col + 2]
+                    and not currentRow[col + 3]
+                    and currentRow[col + 7]
+                    and currentRow[col + 8]
+                    and currentRow[col + 10]
                 )
             ):
-                lost_point += 40
-            # horspool algorithm.
-            # if this_row[col + 10]:
-            #   pattern1 shift 4, pattern2 shift 2. So min=2.
-            # else:
-            #   pattern1 shift 1, pattern2 shift 1. So min=1.
-            if this_row[col + 10]:
-                next(modules_range_short_iter, None)
+                lostPoint += 40
+            if currentRow[col + 10]:
+                next(modulesRangeShortIter, None)
 
-    for col in modules_range:
-        modules_range_short_iter = iter(modules_range_short)
+    for col in modulesRange:
+        modulesRangeShortIter = iter(modulesRange_short)
         row = 0
-        for row in modules_range_short_iter:
+        for row in modulesRangeShortIter:
             if (
                 not modules[row + 1][col]
                 and modules[row + 4][col]
@@ -337,59 +327,19 @@ def _lost_point_level3(modules, modules_count):
                     and modules[row + 10][col]
                 )
             ):
-                lost_point += 40
+                lostPoint += 40
             if modules[row + 10][col]:
-                next(modules_range_short_iter, None)
+                next(modulesRangeShortIter, None)
 
-    return lost_point
+    return lostPoint
 
 
-def _lost_point_level4(modules, modules_count):
-    dark_count = sum(map(sum, modules))
-    percent = float(dark_count) / (modules_count**2)
-    # Every 5% departure from 50%, rating++
+def lostPointLevelD(modules, modulesCount):
+    darkCount = sum(map(sum, modules))
+    percent = float(darkCount) / (modulesCount ** 2)
     rating = int(abs(percent * 100 - 50) / 5)
     return rating * 10
 
-
-def optimal_data_chunks(data, minimum=4):
-    """
-    An iterator returning QRData chunks optimized to the data content.
-
-    :param minimum: The minimum number of bytes in a row to split as a chunk.
-    """
-    data = to_bytestring(data)
-    num_pattern = rb"\d"
-    alpha_pattern = b"[" + re.escape(ALPHA_NUM) + b"]"
-    if len(data) <= minimum:
-        num_pattern = re.compile(b"^" + num_pattern + b"+$")
-        alpha_pattern = re.compile(b"^" + alpha_pattern + b"+$")
-    else:
-        re_repeat = b"{" + str(minimum).encode("ascii") + b",}"
-        num_pattern = re.compile(num_pattern + re_repeat)
-        alpha_pattern = re.compile(alpha_pattern + re_repeat)
-    num_bits = _optimal_split(data, num_pattern)
-    for is_num, chunk in num_bits:
-        if is_num:
-            yield QRData(chunk, mode=MODE_NUMBER, check_data=False)
-        else:
-            for is_alpha, sub_chunk in _optimal_split(chunk, alpha_pattern):
-                mode = MODE_ALPHA_NUM if is_alpha else MODE_8BIT_BYTE
-                yield QRData(sub_chunk, mode=mode, check_data=False)
-
-
-def _optimal_split(data, pattern):
-    while data:
-        match = re.search(pattern, data)
-        if not match:
-            break
-        start, end = match.start(), match.end()
-        if start:
-            yield False, data[:start]
-        yield True, data[start:end]
-        data = data[end:]
-    if data:
-        yield False, data
 
 
 def to_bytestring(data):
@@ -415,16 +365,10 @@ def optimal_mode(data):
 
 class QRData:
     """
-    Data held in a QR compatible format.
-
-    Doesn't currently handle KANJI.
+    QR compatible format DATA.
     """
 
     def __init__(self, data, mode=None, check_data=True):
-        """
-        If ``mode`` isn't provided, the most compact QR data type possible is
-        chosen.
-        """
         if check_data:
             data = to_bytestring(data)
 
@@ -433,9 +377,11 @@ class QRData:
         else:
             self.mode = mode
             if mode not in (MODE_NUMBER, MODE_ALPHA_NUM, MODE_8BIT_BYTE):
-                raise TypeError(f"Invalid mode ({mode})")  # pragma: no cover
+                print("Invalid mode: %s" % mode)
+                return False
             if check_data and mode < optimal_mode(data):  # pragma: no cover
-                raise ValueError(f"Provided data can not be represented in mode {mode}")
+                print("Data is not compatible with mode")
+                return False
 
         self.data = data
 
@@ -458,8 +404,6 @@ class QRData:
                 else:
                     buffer.put(ALPHA_NUM.find(chars), 6)
         else:
-            # Iterating a bytestring in Python 3 returns an integer,
-            # no need to ord().
             data = self.data
             for c in data:
                 buffer.put(c, 8)
@@ -477,8 +421,8 @@ class BitBuffer:
         return ".".join([str(n) for n in self.buffer])
 
     def get(self, index):
-        buf_index = math.floor(index / 8)
-        return ((self.buffer[buf_index] >> (7 - index % 8)) & 1) == 1
+        bufIdx = math.floor(index / 8)
+        return ((self.buffer[bufIdx] >> (7 - index % 8)) & 1) == 1
 
     def put(self, num, length):
         for i in range(length):
@@ -488,15 +432,15 @@ class BitBuffer:
         return self.length
 
     def put_bit(self, bit):
-        buf_index = self.length // 8
-        if len(self.buffer) <= buf_index:
+        bufIdx = self.length // 8
+        if len(self.buffer) <= bufIdx:
             self.buffer.append(0)
         if bit:
-            self.buffer[buf_index] |= 0x80 >> (self.length % 8)
+            self.buffer[bufIdx] |= 0x80 >> (self.length % 8)
         self.length += 1
 
 
-def create_bytes(buffer: BitBuffer, rs_blocks: List[RSBlock]):
+def createBytes(buffer: BitBuffer, rsBlocks: List[polynomial.RSBlock]):
     offset = 0
 
     maxDcCount = 0
@@ -505,35 +449,35 @@ def create_bytes(buffer: BitBuffer, rs_blocks: List[RSBlock]):
     dcdata: List[List[int]] = []
     ecdata: List[List[int]] = []
 
-    for rs_block in rs_blocks:
-        dcCount = rs_block.data_count
-        ecCount = rs_block.total_count - dcCount
+    for rsBlock in rsBlocks:
+        dcCount = rsBlock.dataCount
+        ecCount = rsBlock.totalCount - dcCount
 
         maxDcCount = max(maxDcCount, dcCount)
         maxEcCount = max(maxEcCount, ecCount)
 
-        current_dc = [0xFF & buffer.buffer[i + offset] for i in range(dcCount)]
+        currentDc = [0xFF & buffer.buffer[i + offset] for i in range(dcCount)]
         offset += dcCount
 
         # Get error correction polynomial.
-        if ecCount in LUT.rsPoly_LUT:
-            rsPoly = base.Polynomial(LUT.rsPoly_LUT[ecCount], 0)
+        if ecCount in LUT.RSPOLY_LUT:
+            rsPoly = Polynomial(LUT.RSPOLY_LUT[ecCount], 0)
         else:
-            rsPoly = base.Polynomial([1], 0)
+            rsPoly = Polynomial([1], 0)
             for i in range(ecCount):
-                rsPoly = rsPoly * base.Polynomial([1, base.gexp(i)], 0)
+                rsPoly = rsPoly * Polynomial([1, polynomial.gexp(i)], 0)
 
-        rawPoly = base.Polynomial(current_dc, len(rsPoly) - 1)
+        rawPoly = Polynomial(currentDc, len(rsPoly) - 1)
 
         modPoly = rawPoly % rsPoly
-        current_ec = []
-        mod_offset = len(modPoly) - ecCount
+        currentEc = []
+        modOffset = len(modPoly) - ecCount
         for i in range(ecCount):
-            modIndex = i + mod_offset
-            current_ec.append(modPoly[modIndex] if (modIndex >= 0) else 0)
+            modIndex = i + modOffset
+            currentEc.append(modPoly[modIndex] if (modIndex >= 0) else 0)
 
-        dcdata.append(current_dc)
-        ecdata.append(current_ec)
+        dcdata.append(currentDc)
+        ecdata.append(currentEc)
 
     data = []
     for i in range(maxDcCount):
@@ -550,22 +494,23 @@ def create_bytes(buffer: BitBuffer, rs_blocks: List[RSBlock]):
     return data
 
 
-def create_data(version, data_list):
+def create_data(version, dataList):
 
     buffer = BitBuffer()
-    for data in data_list:
+    for data in dataList:
         buffer.put(data.mode, 4)
-        buffer.put(len(data), length_in_bits(data.mode, version))
+        buffer.put(len(data), getLengthInBits(data.mode, version))
         data.write(buffer)
 
     # Calculate the maximum number of bits for the given version.
-    rs_blocks = base.rs_blocks(version)
-    bit_limit = sum(block.data_count * 8 for block in rs_blocks)
-    if len(buffer) > bit_limit:
+    rsBlocks = polynomial.rsBlocks(version)
+    bitLimit = sum(block.dataCount * 8 for block in rsBlocks)
+    if len(buffer) > bitLimit:
         print("长度溢出")
+        return None
 
     # Terminate the bits (add up to four 0s).
-    for _ in range(min(bit_limit - len(buffer), 4)):
+    for _ in range(min(bitLimit - len(buffer), 4)):
         buffer.put_bit(False)
 
     # Delimit the string into 8-bit words, padding with 0s if necessary.
@@ -575,11 +520,11 @@ def create_data(version, data_list):
             buffer.put_bit(False)
 
     # Add special alternating padding bitstrings until buffer is full.
-    bytes_to_fill = (bit_limit - len(buffer)) // 8
-    for i in range(bytes_to_fill):
+    bytes2Fill = (bitLimit - len(buffer)) // 8
+    for i in range(bytes2Fill):
         if i % 2 == 0:
             buffer.put(PAD0, 8)
         else:
             buffer.put(PAD1, 8)
 
-    return create_bytes(buffer, rs_blocks)
+    return createBytes(buffer, rsBlocks)

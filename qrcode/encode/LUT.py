@@ -1,25 +1,202 @@
-from typing import NamedTuple
-
-EXP_TABLE = list(range(256))
-
-LOG_TABLE = list(range(256))
-
-for i in range(8):
-    EXP_TABLE[i] = 1 << i
-
-for i in range(8, 256):
-    EXP_TABLE[i] = (
-        EXP_TABLE[i - 4] ^ EXP_TABLE[i - 5] ^ EXP_TABLE[i - 6] ^ EXP_TABLE[i - 8]
-    )
-
-for i in range(255):
-    LOG_TABLE[EXP_TABLE[i]] = i
+RSPOLY_LUT = {
+    7: [1, 127, 122, 154, 164, 11, 68, 117],
+    10: [1, 216, 194, 159, 111, 199, 94, 95, 113, 157, 193],
+    13: [1, 137, 73, 227, 17, 177, 17, 52, 13, 46, 43, 83, 132, 120],
+    15: [1, 29, 196, 111, 163, 112, 74, 10, 105, 105, 139, 132, 151, 32, 134, 26],
+    16: [1, 59, 13, 104, 189, 68, 209, 30, 8, 163, 65, 41, 229, 98, 50, 36, 59],
+    17: [1, 119, 66, 83, 120, 119, 22, 197, 83, 249, 41, 143, 134, 85, 53, 125, 99, 79],
+    18: [
+        1,
+        239,
+        251,
+        183,
+        113,
+        149,
+        175,
+        199,
+        215,
+        240,
+        220,
+        73,
+        82,
+        173,
+        75,
+        32,
+        67,
+        217,
+        146,
+    ],
+    20: [
+        1,
+        152,
+        185,
+        240,
+        5,
+        111,
+        99,
+        6,
+        220,
+        112,
+        150,
+        69,
+        36,
+        187,
+        22,
+        228,
+        198,
+        121,
+        121,
+        165,
+        174,
+    ],
+    22: [
+        1,
+        89,
+        179,
+        131,
+        176,
+        182,
+        244,
+        19,
+        189,
+        69,
+        40,
+        28,
+        137,
+        29,
+        123,
+        67,
+        253,
+        86,
+        218,
+        230,
+        26,
+        145,
+        245,
+    ],
+    24: [
+        1,
+        122,
+        118,
+        169,
+        70,
+        178,
+        237,
+        216,
+        102,
+        115,
+        150,
+        229,
+        73,
+        130,
+        72,
+        61,
+        43,
+        206,
+        1,
+        237,
+        247,
+        127,
+        217,
+        144,
+        117,
+    ],
+    26: [
+        1,
+        246,
+        51,
+        183,
+        4,
+        136,
+        98,
+        199,
+        152,
+        77,
+        56,
+        206,
+        24,
+        145,
+        40,
+        209,
+        117,
+        233,
+        42,
+        135,
+        68,
+        70,
+        144,
+        146,
+        77,
+        43,
+        94,
+    ],
+    28: [
+        1,
+        252,
+        9,
+        28,
+        13,
+        18,
+        251,
+        208,
+        150,
+        103,
+        174,
+        100,
+        41,
+        167,
+        12,
+        247,
+        56,
+        117,
+        119,
+        233,
+        127,
+        181,
+        100,
+        121,
+        147,
+        176,
+        74,
+        58,
+        197,
+    ],
+    30: [
+        1,
+        212,
+        246,
+        77,
+        73,
+        195,
+        192,
+        75,
+        98,
+        5,
+        70,
+        103,
+        177,
+        22,
+        217,
+        138,
+        51,
+        181,
+        246,
+        72,
+        25,
+        18,
+        46,
+        228,
+        74,
+        216,
+        195,
+        11,
+        106,
+        130,
+        150,
+    ],
+}
 
 RS_BLOCK_TABLE = (
-    # L
-    # M
-    # Q
-    # H
     # 1
     (1, 26, 19),
     (1, 26, 16),
@@ -221,80 +398,3 @@ RS_BLOCK_TABLE = (
     (34, 54, 24, 34, 55, 25),
     (20, 45, 15, 61, 46, 16),
 )
-
-
-def glog(n):
-    if n < 1:  # pragma: no cover
-        raise ValueError(f"glog({n})")
-    return LOG_TABLE[n]
-
-
-def gexp(n):
-    return EXP_TABLE[n % 255]
-
-
-class Polynomial:
-    def __init__(self, num, shift):
-        if not num:  # pragma: no cover
-            raise Exception(f"{len(num)}/{shift}")
-
-        offset = 0
-        for offset in range(len(num)):
-            if num[offset] != 0:
-                break
-
-        self.num = num[offset:] + [0] * shift
-
-    def __getitem__(self, index):
-        return self.num[index]
-
-    def __iter__(self):
-        return iter(self.num)
-
-    def __len__(self):
-        return len(self.num)
-
-    def __mul__(self, other):
-        num = [0] * (len(self) + len(other) - 1)
-
-        for i, item in enumerate(self):
-            for j, other_item in enumerate(other):
-                num[i + j] ^= gexp(glog(item) + glog(other_item))
-
-        return Polynomial(num, 0)
-
-    def __mod__(self, other):
-        difference = len(self) - len(other)
-        if difference < 0:
-            return self
-
-        ratio = glog(self[0]) - glog(other[0])
-
-        num = [
-            item ^ gexp(glog(other_item) + ratio)
-            for item, other_item in zip(self, other)
-        ]
-        if difference:
-            num.extend(self[-difference:])
-
-        # recursive call
-        return Polynomial(num, 0) % other
-
-
-class RSBlock(NamedTuple):
-    total_count: int
-    data_count: int
-
-
-def rs_blocks(version):
-    offset = 1
-    rs_block = RS_BLOCK_TABLE[(version - 1) * 4 + offset]
-
-    blocks = []
-
-    for i in range(0, len(rs_block), 3):
-        count, total_count, data_count = rs_block[i : i + 3]
-        for _ in range(count):
-            blocks.append(RSBlock(total_count, data_count))
-
-    return blocks
