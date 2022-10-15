@@ -1,7 +1,8 @@
 import sys
-from typing import Dict, List, Optional, cast
+import time
+from typing import Dict, List, NamedTuple, Optional, cast
 from bisect import bisect_left
-import utils
+import qrcode.encode.utils as utils
 
 PixelsType = List[List[Optional[bool]]]
 preComputedQrBlanks: Dict[int, PixelsType] = {}
@@ -9,6 +10,21 @@ preComputedQrBlanks: Dict[int, PixelsType] = {}
 
 def copy2dArray(x):
     return [row[:] for row in x]
+
+
+class ActiveWithNeighbors(NamedTuple):
+    NW: bool
+    N: bool
+    NE: bool
+    W: bool
+    me: bool
+    E: bool
+    SW: bool
+    S: bool
+    SE: bool
+
+    def __bool__(self) -> bool:
+        return self.me
 
 
 class QRCode():
@@ -126,7 +142,7 @@ class QRCode():
         data = maskPattern
         bits = utils.BCHTypeInfo(data)
 
-        # in vertical
+        # 垂直方向
         for i in range(15):
 
             mod = not test and ((bits >> i) & 1) == 1
@@ -138,7 +154,7 @@ class QRCode():
             else:
                 self.pixels[self.pixelsCount - 15 + i][8] = mod
 
-        # in horizontal
+        # 水平方向
         for i in range(15):
 
             mod = not test and ((bits >> i) & 1) == 1
@@ -150,7 +166,6 @@ class QRCode():
             else:
                 self.pixels[8][15 - i - 1] = mod
 
-        # fixed module
         self.pixels[self.pixelsCount - 8][8] = not test
 
     def setupTypeNumber(self, test):
@@ -278,8 +293,8 @@ class QRCode():
         for r in range(-self.border, modcount + self.border, 2):
             if tty:
                 if not invert or r < modcount + self.border - 1:
-                    out.write("\x1b[48;5;232m")  # Background black
-                out.write("\x1b[38;5;255m")  # Foreground white
+                    out.write("\x1b[48;5;232m")  # 黑色背景
+                out.write("\x1b[38;5;255m")  # 白色前景
             for c in range(-self.border, modcount + self.border):
                 pos = getModule(r, c) + (getModule(r + 1, c) << 1)
                 out.write(codes[pos])
@@ -287,3 +302,47 @@ class QRCode():
                 out.write("\x1b[0m")
             out.write("\n")
         out.flush()
+
+    def makeImage(self, **kwargs):
+        """
+        Make an image from the QR Code data.
+
+        If the data has not been compiled yet, make it first.
+        """
+        if self.dataCache is None:
+            self.generateData()
+
+        from qrcode.encode.image.pil import PilImage
+        imageFactory = PilImage
+
+        im = imageFactory(
+            self.border,
+            21,
+            21,
+            qrcode_modules=None,
+            **kwargs,
+        )
+
+        if im.needs_drawrect:
+            for r in range(self.pixelsCount):
+                for c in range(self.pixelsCount):
+                    if im.needs_context:
+                        im.drawrect_context(r, c, qr=self)
+                    elif self.pixels[r][c]:
+                        im.drawrect(r, c)
+        if im.needs_processing:
+            im.process()
+
+        now = int(time.time())
+        fileName = 'output-' + str(now) + '.png'
+        fileRoute = './qrcode/assets/' + fileName
+        im.save(fileRoute)
+        return im
+
+    def active_with_neighbors(self, row: int, col: int) -> ActiveWithNeighbors:
+        context: List[bool] = []
+        for r in range(row - 1, row + 2):
+            for c in range(col - 1, col + 2):
+                context.append(self.is_constrained(r, c) and bool(self.modules[r][c]))
+        return ActiveWithNeighbors(*context)
+        

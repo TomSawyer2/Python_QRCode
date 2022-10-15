@@ -1,5 +1,5 @@
 from typing import NamedTuple
-import LUT
+import qrcode.encode.LUT as LUT
 
 EXP_TABLE = list(range(256))
 
@@ -71,7 +71,6 @@ class Polynomial:
         if difference:
             num.extend(self[-difference:])
 
-        # recursive call
         return Polynomial(num, 0) % other
 
 

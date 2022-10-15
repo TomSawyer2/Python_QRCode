@@ -1,33 +1,30 @@
 import math
 import re
 from typing import List
-import LUT, polynomial
-from polynomial import Polynomial
+import qrcode.encode.LUT as LUT
+import qrcode.encode.polynomial as polynomial
+from qrcode.encode.polynomial import Polynomial
 
 # QR encoding modes.
 MODE_NUMBER = 1 << 0
 MODE_ALPHA_NUM = 1 << 1
 MODE_8BIT_BYTE = 1 << 2
-MODE_KANJI = 1 << 3
 
 # Encoding mode sizes.
 MODE_SIZE_SMALL = {
     MODE_NUMBER: 10,
     MODE_ALPHA_NUM: 9,
     MODE_8BIT_BYTE: 8,
-    MODE_KANJI: 8,
 }
 MODE_SIZE_MEDIUM = {
     MODE_NUMBER: 12,
     MODE_ALPHA_NUM: 11,
     MODE_8BIT_BYTE: 16,
-    MODE_KANJI: 10,
 }
 MODE_SIZE_LARGE = {
     MODE_NUMBER: 14,
     MODE_ALPHA_NUM: 13,
     MODE_8BIT_BYTE: 16,
-    MODE_KANJI: 12,
 }
 
 ALPHA_NUM = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
@@ -79,7 +76,8 @@ PATTERN_POSITION_TABLE = [
     [6, 30, 58, 86, 114, 142, 170],
 ]
 
-G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0)
+G15 = (1 << 10) | (1 << 8) | (1 << 5) | (
+    1 << 4) | (1 << 2) | (1 << 1) | (1 << 0)
 G18 = (
     (1 << 12)
     | (1 << 11)
@@ -173,7 +171,7 @@ def getModeSizesForVersion(version):
 
 
 def getLengthInBits(mode, version):
-    if mode not in (MODE_NUMBER, MODE_ALPHA_NUM, MODE_8BIT_BYTE, MODE_KANJI):
+    if mode not in (MODE_NUMBER, MODE_ALPHA_NUM, MODE_8BIT_BYTE):
         print("Invalid mode: %s" % mode)
         return 0
 
@@ -189,7 +187,7 @@ def checkVersion(version):
 
 
 def lostPoint(modules):
-    
+
     modulesCount = len(modules)
 
     lostPoint = 0
@@ -341,7 +339,6 @@ def lostPointLevelD(modules, modulesCount):
     return rating * 10
 
 
-
 def to_bytestring(data):
     """
     Convert data to a (utf-8 encoded) byte-string if it isn't a byte-string
@@ -391,15 +388,16 @@ class QRData:
     def write(self, buffer):
         if self.mode == MODE_NUMBER:
             for i in range(0, len(self.data), 3):
-                chars = self.data[i : i + 3]
+                chars = self.data[i: i + 3]
                 bit_length = NUMBER_LENGTH[len(chars)]
                 buffer.put(int(chars), bit_length)
         elif self.mode == MODE_ALPHA_NUM:
             for i in range(0, len(self.data), 2):
-                chars = self.data[i : i + 2]
+                chars = self.data[i: i + 2]
                 if len(chars) > 1:
                     buffer.put(
-                        ALPHA_NUM.find(chars[0]) * 45 + ALPHA_NUM.find(chars[1]), 11
+                        ALPHA_NUM.find(chars[0]) * 45 +
+                        ALPHA_NUM.find(chars[1]), 11
                     )
                 else:
                     buffer.put(ALPHA_NUM.find(chars), 6)
