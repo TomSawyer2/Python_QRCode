@@ -265,12 +265,8 @@ class QRCode():
 
         return pattern
 
-    def printAscii(self, out=None, tty=False, invert=False):
-        if out is None:
-            out = sys.stdout
-
-        if tty and not out.isatty():
-            raise OSError("Not a tty")
+    def printAscii(self):
+        out = sys.stdout
 
         if self.dataCache is None:
             self.generateData()
@@ -278,32 +274,20 @@ class QRCode():
         modcount = self.pixelsCount
         codes = [bytes((code,)).decode("cp437")
                  for code in (255, 223, 220, 219)]
-        if tty:
-            invert = True
-        if invert:
-            codes.reverse()
 
         def getModule(x, y) -> int:
-            if invert and self.border and max(x, y) >= modcount + self.border:
-                return 1
             if min(x, y) < 0 or max(x, y) >= modcount:
                 return 0
             return cast(int, self.pixels[x][y])
 
         for r in range(-self.border, modcount + self.border, 2):
-            if tty:
-                if not invert or r < modcount + self.border - 1:
-                    out.write("\x1b[48;5;232m")  # 黑色背景
-                out.write("\x1b[38;5;255m")  # 白色前景
             for c in range(-self.border, modcount + self.border):
                 pos = getModule(r, c) + (getModule(r + 1, c) << 1)
                 out.write(codes[pos])
-            if tty:
-                out.write("\x1b[0m")
             out.write("\n")
         out.flush()
 
-    def makeImage(self, **kwargs):
+    def makeImage(self, filename='', outputdir='', **kwargs):
         """
         生成二维码图片
         """
@@ -314,8 +298,8 @@ class QRCode():
 
         im = PilImage(
             self.border,
-            21,
-            21,
+            self.pixelsCount,
+            10,
             **kwargs,
         )
 
@@ -330,9 +314,10 @@ class QRCode():
             im.process()
 
         now = int(time.time())
-        fileName = 'output-' + str(now) + '.png'
-        fileRoute = './qrcode/assets/' + fileName
+        fileName = filename or 'output-' + str(now) + '.png'
+        fileRoute = (outputdir or './qrcode/assets/') + fileName
         im.save(fileRoute)
+        print('二维码生成成功，文件路径：' + fileRoute)
         return im
 
     def activeWithNeighbors(self, row: int, col: int) -> ActiveWithNeighbors:

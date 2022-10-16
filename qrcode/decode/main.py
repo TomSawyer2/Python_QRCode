@@ -35,9 +35,6 @@ def decodeQRCode(imageUrls):
                 return resList
 
 
-# 解析本地二维码
-# get_ewm(r'qrcode\assets\input.png')
-
 if __name__ == '__main__':
     imageUrls = sys.argv[1:]
     info = decodeQRCode(imageUrls)
