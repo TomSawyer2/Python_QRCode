@@ -45,10 +45,10 @@ class BaseImage:
         """
         x = (col + self.border) * self.boxSize
         y = (row + self.border) * self.boxSize
-        return (
+        return [
             (x, y),
             (x + self.boxSize - 1, y + self.boxSize - 1),
-        )
+        ]
 
     @abc.abstractmethod
     def newImage(self, **kwargs) -> Any:

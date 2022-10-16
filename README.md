@@ -14,6 +14,7 @@ Python实现的二维码编解码功能
 python main.py --encode --data="Hello World"
 python main.py --encode -d "Hello World!" -o file --outputdir=./ -f "HelloWorld.png"
 python main.py --encode -d .gitignore -o file --outputdir=./ -f "gitignore.png" -t file
+python main.py --encode -d README.md -o file --outputdir=./ -f "README.png" -t file
 ```
 
 参数说明（加粗代表必须有）：
@@ -27,6 +28,7 @@ python main.py --encode -d .gitignore -o file --outputdir=./ -f "gitignore.png" 
 
 ```bash
 python main.py --decode --data="qrcode/assets/input.png"
+python main.py --decode --data="README.png"
 ```
 
 参数说明（加粗代表必须有）：
@@ -43,7 +45,7 @@ python main.py --decode --data="qrcode/assets/input.png"
 - [x] 通过本地文件解析
 - [x] 通过命令行图案输出
 - [x] 通过图片文件输出
-- [ ] 大数据量编码
+- [x] 大数据量编码
 
 ### 二维码解码
 

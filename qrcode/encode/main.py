@@ -11,6 +11,10 @@ preComputedQrBlanks: Dict[int, PixelsType] = {}
 def copy2dArray(x):
     return [row[:] for row in x]
 
+def make(data=None, **kwargs):
+    qr = QRCode(**kwargs)
+    qr.addData(data)
+    return qr.makeImage()
 
 class ActiveWithNeighbors(NamedTuple):
     NW: bool
@@ -29,6 +33,7 @@ class ActiveWithNeighbors(NamedTuple):
 
 class QRCode():
     pixels: PixelsType
+    boxSize = 10
 
     def __init__(self,
                  version=None,
@@ -51,14 +56,24 @@ class QRCode():
         self.dataList = []
 
     def addData(self, data):
-        self.dataList.append(utils.QRData(data))
+        if isinstance(data, utils.QRData):
+            self.dataList.append(data)
+        else:
+            self.dataList.append(utils.QRData(data))
         self.dataCache = None
 
     def generateData(self):
-        self.bestFit()
-        self.makeImpl(False, self.bestMaskPattern())
+        self.bestFit(start=self.version)
+        
+        if self.maskPattern is None:
+            self.makeImpl(False, self.bestMaskPattern())
+        else:
+            self.makeImpl(False, self.maskPattern)
 
-    def bestFit(self, start=1):
+    def bestFit(self, start=None):
+        if start is None:
+            start = 1
+        utils.checkVersion(start)
         mode_sizes = utils.getModeSizesForVersion(start)
         buffer = utils.BitBuffer()
         for data in self.dataList:
@@ -76,6 +91,7 @@ class QRCode():
 
         if mode_sizes is not utils.getModeSizesForVersion(self.version):
             self.bestFit(start=self.version)
+        
         return self.version
 
     def setupPositionProbePattern(self, row, col):
@@ -223,14 +239,17 @@ class QRCode():
                     break
 
     def makeImpl(self, test, maskPattern):
+        utils.checkVersion(self.version)
         self.pixelsCount = self.version * 4 + 17
 
         if self.version in preComputedQrBlanks:
             self.pixels = copy2dArray(preComputedQrBlanks[self.version])
         else:
-            self.pixels = [
-                [None] * self.pixelsCount for i in range(self.pixelsCount)
-            ]
+            self.pixels = [None] * self.pixelsCount
+
+            for row in range(self.pixelsCount):
+                self.pixels[row] = [None] * self.pixelsCount
+
             self.setupPositionProbePattern(0, 0)
             self.setupPositionProbePattern(self.pixelsCount - 7, 0)
             self.setupPositionProbePattern(0, self.pixelsCount - 7)
@@ -275,7 +294,7 @@ class QRCode():
         codes = [bytes((code,)).decode("cp437")
                  for code in (255, 223, 220, 219)]
 
-        def getModule(x, y) -> int:
+        def getModule(x, y):
             if min(x, y) < 0 or max(x, y) >= modcount:
                 return 0
             return cast(int, self.pixels[x][y])
@@ -299,19 +318,14 @@ class QRCode():
         im = PilImage(
             self.border,
             self.pixelsCount,
-            10,
+            self.boxSize,
             **kwargs,
         )
 
-        if im.needsDrawrect:
-            for r in range(self.pixelsCount):
-                for c in range(self.pixelsCount):
-                    if im.needsContext:
-                        im.drawrectContext(r, c, qr=self)
-                    elif self.pixels[r][c]:
-                        im.drawrect(r, c)
-        if im.needsProcessing:
-            im.process()
+        for r in range(self.pixelsCount):
+            for c in range(self.pixelsCount):
+                if self.pixels[r][c]:
+                    im.drawrect(r, c)
 
         now = int(time.time())
         fileName = filename or 'output-' + str(now) + '.png'
@@ -324,6 +338,18 @@ class QRCode():
         context: List[bool] = []
         for r in range(row - 1, row + 2):
             for c in range(col - 1, col + 2):
-                context.append(self.is_constrained(r, c) and bool(self.modules[r][c]))
+                context.append(self.isConstrained(
+                    r, c) and bool(self.pixels[r][c]))
         return ActiveWithNeighbors(*context)
-        
+
+    def isConstrained(self, row, col):
+        return row >= 0 and row < len(self.pixels) and col >= 0 and col < len(self.pixels[row])
+
+    def getModuleContext(self, row, col):
+        context = []
+
+        for r in range(row-1,row + 2):
+            for c in range(col - 1, col + 2):
+                if r != row or c != col:
+                    context.append(self.isConstrained(r,c) and self.pixels[r][c])
+        return context

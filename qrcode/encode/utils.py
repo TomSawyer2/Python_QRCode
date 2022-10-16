@@ -3,28 +3,32 @@ import re
 from typing import List
 import qrcode.encode.LUT as LUT
 import qrcode.encode.polynomial as polynomial
-from qrcode.encode.polynomial import Polynomial
+from qrcode.encode.polynomial import Polynomial, gexp
 
 # QR encoding modes.
 MODE_NUMBER = 1 << 0
 MODE_ALPHA_NUM = 1 << 1
 MODE_8BIT_BYTE = 1 << 2
+MODE_KANJI = 1 << 3
 
 # Encoding mode sizes.
 MODE_SIZE_SMALL = {
     MODE_NUMBER: 10,
     MODE_ALPHA_NUM: 9,
     MODE_8BIT_BYTE: 8,
+    MODE_KANJI: 8,
 }
 MODE_SIZE_MEDIUM = {
     MODE_NUMBER: 12,
     MODE_ALPHA_NUM: 11,
     MODE_8BIT_BYTE: 16,
+    MODE_KANJI: 10,
 }
 MODE_SIZE_LARGE = {
     MODE_NUMBER: 14,
     MODE_ALPHA_NUM: 13,
     MODE_8BIT_BYTE: 16,
+    MODE_KANJI: 12,
 }
 
 ALPHA_NUM = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
@@ -106,7 +110,11 @@ BIT_LIMIT_TABLE = [
         for version in range(1, 41)
     ]
 ]
-
+_data_count = lambda block: block.dataCount
+BIT_LIMIT_TABLE = [
+    [0] + [8*sum(map(_data_count, polynomial.rsBlocks(version)))
+           for version in range(1, 41)]
+]
 
 def BCHTypeInfo(data):
     d = data << 10
@@ -444,17 +452,21 @@ def createBytes(buffer: BitBuffer, rsBlocks: List[polynomial.RSBlock]):
     maxDcCount = 0
     maxEcCount = 0
 
-    dcdata: List[List[int]] = []
-    ecdata: List[List[int]] = []
+    dcdata = [0] * len(rsBlocks)
+    ecdata = [0] * len(rsBlocks)
 
-    for rsBlock in rsBlocks:
-        dcCount = rsBlock.dataCount
-        ecCount = rsBlock.totalCount - dcCount
+    for r in range(len(rsBlocks)):
+
+        dcCount = rsBlocks[r].dataCount
+        ecCount = rsBlocks[r].totalCount - dcCount
 
         maxDcCount = max(maxDcCount, dcCount)
         maxEcCount = max(maxEcCount, ecCount)
 
-        currentDc = [0xFF & buffer.buffer[i + offset] for i in range(dcCount)]
+        dcdata[r] = [0] * dcCount
+
+        for i in range(len(dcdata[r])):
+            dcdata[r][i] = 0xff & buffer.buffer[i + offset]
         offset += dcCount
 
         # Get error correction polynomial.
@@ -463,31 +475,30 @@ def createBytes(buffer: BitBuffer, rsBlocks: List[polynomial.RSBlock]):
         else:
             rsPoly = Polynomial([1], 0)
             for i in range(ecCount):
-                rsPoly = rsPoly * Polynomial([1, polynomial.gexp(i)], 0)
+                rsPoly = rsPoly * Polynomial([1, gexp(i)], 0)
 
-        rawPoly = Polynomial(currentDc, len(rsPoly) - 1)
+        rawPoly = Polynomial(dcdata[r], len(rsPoly) - 1)
 
         modPoly = rawPoly % rsPoly
-        currentEc = []
-        modOffset = len(modPoly) - ecCount
-        for i in range(ecCount):
-            modIndex = i + modOffset
-            currentEc.append(modPoly[modIndex] if (modIndex >= 0) else 0)
+        ecdata[r] = [0] * (len(rsPoly) - 1)
+        for i in range(len(ecdata[r])):
+            modIndex = i + len(modPoly) - len(ecdata[r])
+            ecdata[r][i] = modPoly[modIndex] if (modIndex >= 0) else 0
+    totalCodeCount = sum(rs_block.totalCount for rs_block in rsBlocks)
+    data = [None] * totalCodeCount
+    index = 0
 
-        dcdata.append(currentDc)
-        ecdata.append(currentEc)
-
-    data = []
     for i in range(maxDcCount):
-        for dc in dcdata:
-            if i >= len(dc):
-                break
-            data.append(dc[i])
+        for r in range(len(rsBlocks)):
+            if i < len(dcdata[r]):
+                data[index] = dcdata[r][i]
+                index += 1
+
     for i in range(maxEcCount):
-        for ec in ecdata:
-            if i >= len(ec):
-                break
-            data.append(ec[i])
+        for r in range(len(rsBlocks)):
+            if i < len(ecdata[r]):
+                data[index] = ecdata[r][i]
+                index += 1
 
     return data
 
