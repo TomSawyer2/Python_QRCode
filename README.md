@@ -6,6 +6,8 @@ Python实现的二维码编解码功能
 
 ## 使用
 
+**根据系统运行`init.bat`或`init.sh`脚本安装相关依赖**
+
 ### 编码
 
 ```bash
@@ -55,4 +57,4 @@ python main.py --decode --data="qrcode/assets/input.png"
 - [x] 集成函数
 - [ ] 单元测试
 - [ ] 编码文档
-- [ ] 本地依赖检测脚本
+- [x] 本地依赖检测脚本
