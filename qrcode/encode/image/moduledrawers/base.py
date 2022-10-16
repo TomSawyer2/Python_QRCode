@@ -1,11 +1,9 @@
-from __future__ import absolute_import
-
 import abc
 
 
 class QRModuleDrawer(abc.ABC):
 
-    needs_neighbors = False
+    needsNeighbors = False
 
     def __init__(self, **kwargs):
         pass
@@ -14,5 +12,5 @@ class QRModuleDrawer(abc.ABC):
         self.img = img
 
     @abc.abstractmethod
-    def drawrect(self, box, is_active) -> None:
+    def drawrect(self, box, isActive) -> None:
         ...

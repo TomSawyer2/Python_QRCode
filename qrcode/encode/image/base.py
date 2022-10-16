@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, NamedTuple, Optional, Tuple, Type, Union
+from typing import Any, Dict, Optional, Tuple, Type, Union
 from qrcode.encode.image.moduledrawers.base import QRModuleDrawer
 from qrcode.encode.main import ActiveWithNeighbors, QRCode
 
@@ -13,19 +13,18 @@ class BaseImage:
     """
 
     kind: Optional[str] = None
-    allowed_kinds: Optional[Tuple[str]] = None
-    needs_context = False
-    needs_processing = False
-    needs_drawrect = True
+    allowedKinds: Optional[Tuple[str]] = None
+    needsContext = False
+    needsProcessing = False
+    needsDrawrect = True
 
-    def __init__(self, border, width, box_size, *args, **kwargs):
+    def __init__(self, border, width, boxSize, *args, **kwargs):
         self.border = border
         self.width = width
-        self.box_size = box_size
-        self.pixel_size = (self.width + self.border * 2) * self.box_size
-        self._img = self.new_image(**kwargs)
-        self.modules = kwargs["qrcode_modules"]
-        self.init_new_image()
+        self.boxSize = boxSize
+        self.pixelSize = (self.width + self.border * 2) * self.boxSize
+        self._img = self.newImage(**kwargs)
+        self.initNewImage()
 
     @abc.abstractmethod
     def drawrect(self, row, col):
@@ -39,25 +38,25 @@ class BaseImage:
         Save the image file.
         """
 
-    def pixel_box(self, row, col):
+    def pixelBox(self, row, col):
         """
         A helper method for pixel-based image generators that specifies the
         four pixel coordinates for a single rect.
         """
-        x = (col + self.border) * self.box_size
-        y = (row + self.border) * self.box_size
+        x = (col + self.border) * self.boxSize
+        y = (row + self.border) * self.boxSize
         return (
             (x, y),
-            (x + self.box_size - 1, y + self.box_size - 1),
+            (x + self.boxSize - 1, y + self.boxSize - 1),
         )
 
     @abc.abstractmethod
-    def new_image(self, **kwargs) -> Any:
+    def newImage(self, **kwargs) -> Any:
         """
         Build the image class. Subclasses should return the class created.
         """
 
-    def init_new_image(self):
+    def initNewImage(self):
         pass
 
     def get_image(self, **kwargs):
@@ -66,23 +65,23 @@ class BaseImage:
         """
         return self._img
 
-    def check_kind(self, kind, transform=None):
+    def checkKind(self, kind, transform=None):
         """
         Get the image type.
         """
         if kind is None:
             kind = self.kind
-        allowed = not self.allowed_kinds or kind in self.allowed_kinds
+        allowed = not self.allowedKinds or kind in self.allowedKinds
         if transform:
             kind = transform(kind)
             if not allowed:
-                allowed = kind in self.allowed_kinds
+                allowed = kind in self.allowedKinds
         if not allowed:
             raise ValueError(
                 f"Cannot set {type(self).__name__} type to {kind}")
         return kind
 
-    def is_eye(self, row: int, col: int):
+    def isEye(self, row: int, col: int):
         """
         Find whether the referenced module is in an eye.
         """
@@ -94,56 +93,56 @@ class BaseImage:
 
 
 class BaseImageWithDrawer(BaseImage):
-    default_drawer_class: Type[QRModuleDrawer]
-    drawer_aliases: DrawerAliases = {}
+    defaultDrawerClass: Type[QRModuleDrawer]
+    drawerAliases: DrawerAliases = {}
 
-    def get_default_module_drawer(self) -> QRModuleDrawer:
-        return self.default_drawer_class()
+    def getDefaultModuleDrawer(self) -> QRModuleDrawer:
+        return self.defaultDrawerClass()
 
-    def get_default_eye_drawer(self) -> QRModuleDrawer:
-        return self.default_drawer_class()
+    def getDefaultEyeDrawer(self) -> QRModuleDrawer:
+        return self.defaultDrawerClass()
 
-    needs_context = True
+    needsContext = True
 
-    module_drawer: "QRModuleDrawer"
-    eye_drawer: "QRModuleDrawer"
+    moduleDrawer: "QRModuleDrawer"
+    eyeDrawer: "QRModuleDrawer"
 
     def __init__(
         self,
         *args,
-        module_drawer: Union[QRModuleDrawer, str, None] = None,
-        eye_drawer: Union[QRModuleDrawer, str, None] = None,
+        moduleDrawer: Union[QRModuleDrawer, str, None] = None,
+        eyeDrawer: Union[QRModuleDrawer, str, None] = None,
         **kwargs,
     ):
-        self.module_drawer = (
-            self.get_drawer(module_drawer) or self.get_default_module_drawer()
+        self.moduleDrawer = (
+            self.getDrawer(moduleDrawer) or self.getDefaultModuleDrawer()
         )
-        self.eye_drawer = self.get_drawer(
-            eye_drawer) or self.get_default_eye_drawer()
+        self.eyeDrawer = self.getDrawer(
+            eyeDrawer) or self.getDefaultEyeDrawer()
         super().__init__(*args, **kwargs)
 
-    def get_drawer(
+    def getDrawer(
         self, drawer: Union[QRModuleDrawer, str, None]
     ) -> Optional[QRModuleDrawer]:
         if not isinstance(drawer, str):
             return drawer
-        drawer_cls, kwargs = self.drawer_aliases[drawer]
-        return drawer_cls(**kwargs)
+        drawerCls, kwargs = self.drawerAliases[drawer]
+        return drawerCls(**kwargs)
 
-    def init_new_image(self):
-        self.module_drawer.initialize(img=self)
-        self.eye_drawer.initialize(img=self)
+    def initNewImage(self):
+        self.moduleDrawer.initialize(img=self)
+        self.eyeDrawer.initialize(img=self)
 
-        return super().init_new_image()
+        return super().initNewImage()
 
-    def drawrect_context(self, row: int, col: int, qr: "QRCode"):
-        box = self.pixel_box(row, col)
-        drawer = self.eye_drawer if self.is_eye(
-            row, col) else self.module_drawer
-        is_active: Union[bool, ActiveWithNeighbors] = (
-            qr.active_with_neighbors(row, col)
-            if drawer.needs_neighbors
+    def drawrectContext(self, row: int, col: int, qr: "QRCode"):
+        box = self.pixelBox(row, col)
+        drawer = self.eyeDrawer if self.isEye(
+            row, col) else self.moduleDrawer
+        isActive: Union[bool, ActiveWithNeighbors] = (
+            qr.activeWithNeighbors(row, col)
+            if drawer.needsNeighbors
             else False
         )
 
-        drawer.drawrect(box, is_active)
+        drawer.drawrect(box, isActive)

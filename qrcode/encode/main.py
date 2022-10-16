@@ -305,32 +305,28 @@ class QRCode():
 
     def makeImage(self, **kwargs):
         """
-        Make an image from the QR Code data.
-
-        If the data has not been compiled yet, make it first.
+        生成二维码图片
         """
         if self.dataCache is None:
             self.generateData()
 
         from qrcode.encode.image.pil import PilImage
-        imageFactory = PilImage
 
-        im = imageFactory(
+        im = PilImage(
             self.border,
             21,
             21,
-            qrcode_modules=None,
             **kwargs,
         )
 
-        if im.needs_drawrect:
+        if im.needsDrawrect:
             for r in range(self.pixelsCount):
                 for c in range(self.pixelsCount):
-                    if im.needs_context:
-                        im.drawrect_context(r, c, qr=self)
+                    if im.needsContext:
+                        im.drawrectContext(r, c, qr=self)
                     elif self.pixels[r][c]:
                         im.drawrect(r, c)
-        if im.needs_processing:
+        if im.needsProcessing:
             im.process()
 
         now = int(time.time())
@@ -339,7 +335,7 @@ class QRCode():
         im.save(fileRoute)
         return im
 
-    def active_with_neighbors(self, row: int, col: int) -> ActiveWithNeighbors:
+    def activeWithNeighbors(self, row: int, col: int) -> ActiveWithNeighbors:
         context: List[bool] = []
         for r in range(row - 1, row + 2):
             for c in range(col - 1, col + 2):

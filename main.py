@@ -5,7 +5,8 @@ from qrcode.encode.main import QRCode
 def encodeTest():
     qr = QRCode(None, 1)
     qr.addData("666")
-    qr.makeImage()
+    qr.makeImage(backColor="red")
+    qr.printAscii()
 
 encodeTest()
 

@@ -6,38 +6,38 @@ class PilImage(qrcode.encode.image.base.BaseImage):
 
     kind = "PNG"
 
-    def new_image(self, **kwargs):
-        back_color = kwargs.get("back_color", "white")
-        fill_color = kwargs.get("fill_color", "black")
+    def newImage(self, **kwargs):
+        backColor = kwargs.get("backColor", "white")
+        fillColor = kwargs.get("fillColor", "black")
 
         try:
-            fill_color = fill_color.lower()
+            fillColor = fillColor.lower()
         except AttributeError:
             pass
 
         try:
-            back_color = back_color.lower()
+            backColor = backColor.lower()
         except AttributeError:
             pass
 
-        if fill_color == "black" and back_color == "white":
+        if fillColor == "black" and backColor == "white":
             mode = "1"
-            fill_color = 0
-            back_color = 255
-        elif back_color == "transparent":
+            fillColor = 0
+            backColor = 255
+        elif backColor == "transparent":
             mode = "RGBA"
-            back_color = None
+            backColor = None
         else:
             mode = "RGB"
 
-        img = Image.new(mode, (self.pixel_size, self.pixel_size), back_color)
-        self.fill_color = fill_color
+        img = Image.new(mode, (self.pixelSize, self.pixelSize), backColor)
+        self.fillColor = fillColor
         self._idr = ImageDraw.Draw(img)
         return img
 
     def drawrect(self, row, col):
-        box = self.pixel_box(row, col)
-        self._idr.rectangle(box, fill=self.fill_color)
+        box = self.pixelBox(row, col)
+        self._idr.rectangle(box, fill=self.fillColor)
 
     def save(self, stream, format=None, **kwargs):
         kind = kwargs.pop("kind", self.kind)
