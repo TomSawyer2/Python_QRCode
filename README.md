@@ -56,6 +56,7 @@ python main.py --decode --data="README.png"
 
 ### 杂项
 
+- [ ] WebUI
 - [x] 集成函数
 - [ ] 单元测试
 - [ ] 编码文档

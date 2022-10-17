@@ -5,13 +5,13 @@ import qrcode.encode.LUT as LUT
 import qrcode.encode.polynomial as polynomial
 from qrcode.encode.polynomial import Polynomial, gexp
 
-# QR encoding modes.
+# 二维码编码模式
 MODE_NUMBER = 1 << 0
 MODE_ALPHA_NUM = 1 << 1
 MODE_8BIT_BYTE = 1 << 2
 MODE_KANJI = 1 << 3
 
-# Encoding mode sizes.
+# 编码模式对应的大小
 MODE_SIZE_SMALL = {
     MODE_NUMBER: 10,
     MODE_ALPHA_NUM: 9,
@@ -34,7 +34,6 @@ MODE_SIZE_LARGE = {
 ALPHA_NUM = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
 RE_ALPHA_NUM = re.compile(b"^[" + re.escape(ALPHA_NUM) + rb"]*\Z")
 
-# The number of bits for numeric delimited data lengths.
 NUMBER_LENGTH = {3: 10, 2: 7, 1: 4}
 
 PATTERN_POSITION_TABLE = [
@@ -98,7 +97,6 @@ PAD0 = 0xEC
 PAD1 = 0x11
 
 
-# Precompute bit count limits for each version.
 def dataCount(block):
     return block.dataCount
 
@@ -110,11 +108,14 @@ BIT_LIMIT_TABLE = [
         for version in range(1, 41)
     ]
 ]
-_data_count = lambda block: block.dataCount
+def _data_count(block): return block.dataCount
+
+
 BIT_LIMIT_TABLE = [
     [0] + [8*sum(map(_data_count, polynomial.rsBlocks(version)))
            for version in range(1, 41)]
 ]
+
 
 def BCHTypeInfo(data):
     d = data << 10
@@ -145,7 +146,7 @@ def patternPosition(version):
 
 def getMaskFunc(pattern):
     """
-    Return the mask function for the given mask pattern.
+    返回maskPattern对应的函数
     :param pattern: Mask pattern (0-7)
     :return: Mask function
     """
@@ -347,20 +348,13 @@ def lostPointLevelD(modules, modulesCount):
     return rating * 10
 
 
-def to_bytestring(data):
-    """
-    Convert data to a (utf-8 encoded) byte-string if it isn't a byte-string
-    already.
-    """
+def toBytestring(data):
     if not isinstance(data, bytes):
         data = str(data).encode("utf-8")
     return data
 
 
-def optimal_mode(data):
-    """
-    Calculate the optimal mode for this chunk of data.
-    """
+def optimalMode(data):
     if data.isdigit():
         return MODE_NUMBER
     if RE_ALPHA_NUM.match(data):
@@ -369,22 +363,19 @@ def optimal_mode(data):
 
 
 class QRData:
-    """
-    QR compatible format DATA.
-    """
 
     def __init__(self, data, mode=None, check_data=True):
         if check_data:
-            data = to_bytestring(data)
+            data = toBytestring(data)
 
         if mode is None:
-            self.mode = optimal_mode(data)
+            self.mode = optimalMode(data)
         else:
             self.mode = mode
             if mode not in (MODE_NUMBER, MODE_ALPHA_NUM, MODE_8BIT_BYTE):
                 print("Invalid mode: %s" % mode)
                 return False
-            if check_data and mode < optimal_mode(data):  # pragma: no cover
+            if check_data and mode < optimalMode(data):  # pragma: no cover
                 print("Data is not compatible with mode")
                 return False
 
@@ -469,7 +460,6 @@ def createBytes(buffer: BitBuffer, rsBlocks: List[polynomial.RSBlock]):
             dcdata[r][i] = 0xff & buffer.buffer[i + offset]
         offset += dcCount
 
-        # Get error correction polynomial.
         if ecCount in LUT.RSPOLY_LUT:
             rsPoly = Polynomial(LUT.RSPOLY_LUT[ecCount], 0)
         else:
@@ -511,24 +501,21 @@ def create_data(version, dataList):
         buffer.put(len(data), getLengthInBits(data.mode, version))
         data.write(buffer)
 
-    # Calculate the maximum number of bits for the given version.
+    # 计算版本对应的最大容量
     rsBlocks = polynomial.rsBlocks(version)
     bitLimit = sum(block.dataCount * 8 for block in rsBlocks)
     if len(buffer) > bitLimit:
         print("长度溢出")
         return None
 
-    # Terminate the bits (add up to four 0s).
     for _ in range(min(bitLimit - len(buffer), 4)):
         buffer.put_bit(False)
 
-    # Delimit the string into 8-bit words, padding with 0s if necessary.
     delimit = len(buffer) % 8
     if delimit:
         for _ in range(8 - delimit):
             buffer.put_bit(False)
 
-    # Add special alternating padding bitstrings until buffer is full.
     bytes2Fill = (bitLimit - len(buffer)) // 8
     for i in range(bytes2Fill):
         if i % 2 == 0:

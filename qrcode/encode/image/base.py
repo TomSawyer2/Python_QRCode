@@ -8,10 +8,6 @@ DrawerAliases = Dict[str, Tuple[Type[QRModuleDrawer], Dict[str, Any]]]
 
 
 class BaseImage:
-    """
-    Base QRCode image output class.
-    """
-
     kind: Optional[str] = None
     allowedKinds: Optional[Tuple[str]] = None
     needsContext = False
@@ -29,20 +25,16 @@ class BaseImage:
     @abc.abstractmethod
     def drawrect(self, row, col):
         """
-        Draw a single rectangle of the QR code.
+        二维码绘制矩形
         """
 
     @abc.abstractmethod
     def save(self, stream, kind=None):
         """
-        Save the image file.
+        保存图片
         """
 
     def pixelBox(self, row, col):
-        """
-        A helper method for pixel-based image generators that specifies the
-        four pixel coordinates for a single rect.
-        """
         x = (col + self.border) * self.boxSize
         y = (row + self.border) * self.boxSize
         return [
@@ -53,7 +45,7 @@ class BaseImage:
     @abc.abstractmethod
     def newImage(self, **kwargs) -> Any:
         """
-        Build the image class. Subclasses should return the class created.
+        新建Image类
         """
 
     def initNewImage(self):
@@ -61,13 +53,13 @@ class BaseImage:
 
     def get_image(self, **kwargs):
         """
-        Return the image class for further processing.
+        返回类内的图片
         """
         return self._img
 
     def checkKind(self, kind, transform=None):
         """
-        Get the image type.
+        检查图片类型
         """
         if kind is None:
             kind = self.kind
@@ -80,16 +72,6 @@ class BaseImage:
             raise ValueError(
                 f"Cannot set {type(self).__name__} type to {kind}")
         return kind
-
-    def isEye(self, row: int, col: int):
-        """
-        Find whether the referenced module is in an eye.
-        """
-        return (
-            (row < 7 and col < 7)
-            or (row < 7 and self.width - col < 8)
-            or (self.width - row < 8 and col < 7)
-        )
 
 
 class BaseImageWithDrawer(BaseImage):
@@ -134,15 +116,3 @@ class BaseImageWithDrawer(BaseImage):
         self.eyeDrawer.initialize(img=self)
 
         return super().initNewImage()
-
-    def drawrectContext(self, row: int, col: int, qr: "QRCode"):
-        box = self.pixelBox(row, col)
-        drawer = self.eyeDrawer if self.isEye(
-            row, col) else self.moduleDrawer
-        isActive: Union[bool, ActiveWithNeighbors] = (
-            qr.activeWithNeighbors(row, col)
-            if drawer.needsNeighbors
-            else False
-        )
-
-        drawer.drawrect(box, isActive)
