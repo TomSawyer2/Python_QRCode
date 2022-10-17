@@ -306,7 +306,7 @@ class QRCode():
             out.write("\n")
         out.flush()
 
-    def makeImage(self, filename='', outputdir='', **kwargs):
+    def makeImage(self, filename='', outputdir='', save=True, **kwargs):
         """
         生成二维码图片
         """
@@ -327,12 +327,15 @@ class QRCode():
                 if self.pixels[r][c]:
                     im.drawrect(r, c)
 
-        now = int(time.time())
-        fileName = filename or 'output-' + str(now) + '.png'
-        fileRoute = (outputdir or './qrcode/assets/') + fileName
-        im.save(fileRoute)
-        print('二维码生成成功，文件路径：' + fileRoute)
+        if save:
+            now = int(time.time())
+            fileName = filename or 'output-' + str(now) + '.png'
+            fileRoute = (outputdir or './qrcode/assets/') + fileName
+            im.save(fileRoute)
+            print('二维码生成成功，文件路径：' + fileRoute)
+            
         return im
+        
 
     def activeWithNeighbors(self, row: int, col: int) -> ActiveWithNeighbors:
         context: List[bool] = []

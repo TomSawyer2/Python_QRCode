@@ -65,19 +65,21 @@ def encode(options):
         if not os.path.exists(outputdir):
             os.makedirs(outputdir)
 
-        qr.makeImage(filename, outputdir)
+        qr.makeImage(filename, outputdir, True)
 
     print('编码成功')
 
 
 def main(argv):
     args = getopt.getopt(argv, "d:t:o:f:", [
-                         "encode", "decode", "data=", "type=", "output=", "filename=", "outputdir="])
+                         "encode", "decode", "web", "data=", "type=", "output=", "filename=", "outputdir="])
     options = args[0]
     if options[0][0] == "--encode":
         encode(options)
     elif options[0][0] == "--decode":
         decode(options)
+    elif options[0][0] == "--web":
+        os.system('python web.py')
     else:
         print("请选择模式")
 

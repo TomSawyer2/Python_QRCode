@@ -1,6 +1,5 @@
 *.pyc
 .tox
-dist/
 .coverage
 .coverage.*
 build/
@@ -8,5 +7,5 @@ build/
 .idea/
 .vscode/
 cov.xml
-*/__pycache__
+__pycache__/
 */assets

@@ -8,7 +8,9 @@ Python实现的二维码编解码功能
 
 **根据系统运行`init.bat`或`init.sh`脚本安装相关依赖**
 
-### 编码
+### 一、命令行模式
+
+#### 编码
 
 ```bash
 python main.py --encode --data="Hello World"
@@ -24,7 +26,7 @@ python main.py --encode -d README.md -o file --outputdir=./ -f "README.png" -t f
 `-f/--filename`: 输出文件名，包含后缀，默认为`output-当前时间戳.png`
 `--outputdir`: 输出文件夹，格式为`./path/to/dir/`，默认为`./qrcode/assets/`
 
-### 解码
+#### 解码
 
 ```bash
 python main.py --decode --data="qrcode/assets/input.png"
@@ -36,6 +38,16 @@ python main.py --decode --data="README.png"
 
 支持同时解码多个二维码，只需要在`--data`后面加上英文逗号，然后输入多个二维码的路径或URL即可
 **注意：同时解码多个二维码时文件路径、URL中不能包含英文逗号，否则会出错**
+
+### 二、WebUI模式
+
+```bash
+python main.py --web
+```
+
+### 三、插件模式
+
+直接作为python库引入使用
 
 ## todo
 
