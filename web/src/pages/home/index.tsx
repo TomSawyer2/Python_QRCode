@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Col, Input, message, Row, Spin, Upload } from 'antd';
+import { Button, Col, Input, message, Row, Spin, Tooltip, Upload } from 'antd';
 
 import HeaderBar from '@/components/HeaderBar';
 import { decodeQRCode, encodeQRCode } from '@/services/qrcode';
@@ -81,6 +81,7 @@ const Page: React.FC = () => {
           <div className="encode">
             <Input.TextArea
               rows={4}
+              allowClear
               className="encode-input"
               placeholder="请输入要编码的内容"
               onChange={(e) => setEncodeData(e.target.value)}
@@ -89,7 +90,16 @@ const Page: React.FC = () => {
               {encodeImg === '' ? (
                 <div className="empty-img-box">{encodeLoading && <Spin />}</div>
               ) : (
-                <div className="img-box">{encodeLoading ? <Spin /> : <img src={encodeImg} />}</div>
+                <div className="img-box">
+                  {encodeLoading ? (
+                    <Spin />
+                  ) : (
+                    <img
+                      className="image"
+                      src={encodeImg}
+                    />
+                  )}
+                </div>
               )}
             </div>
             <div>
@@ -123,15 +133,32 @@ const Page: React.FC = () => {
               >
                 <div className="img-box">
                   {decodeInput === '' ? (
-                    <div className="empty-img-box" />
+                    <div className="empty-img-box-upload" />
                   ) : (
-                    <img src={`data:image/png;base64,${decodeInput}`} />
+                    <div className="mask-box">
+                      <img
+                        className="image"
+                        src={`data:image/png;base64,${decodeInput}`}
+                      />
+                      <div className="mask">
+                        <Button>更新</Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </Upload.Dragger>
             </div>
             <div className="decode-output">
-              {decodeLoading ? <Spin /> : <span>{decodeOutput}</span>}
+              {decodeLoading ? (
+                <Spin />
+              ) : (
+                <Tooltip
+                  placement="top"
+                  title={decodeOutput}
+                >
+                  <span className="output-text">{decodeOutput}</span>
+                </Tooltip>
+              )}
             </div>
             <Button
               type="primary"
