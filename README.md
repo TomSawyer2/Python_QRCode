@@ -25,6 +25,8 @@ python main.py --encode -d README.md -o file --outputdir=./ -f "README.png" -t f
 `-o/--output`: 二维码输出类型，`file`或`terminal`，默认为终端输出
 `-f/--filename`: 输出文件名，包含后缀，默认为`output-当前时间戳.png`
 `--outputdir`: 输出文件夹，格式为`./path/to/dir/`，默认为`./qrcode/assets/`
+`--backcolor`: 背景色，可以是颜色英语，也可以是十六进制数据，默认为白色
+`--fillcolor`: 填充色，可以是颜色英语，也可以是十六进制数据，默认为黑色
 
 #### 解码
 

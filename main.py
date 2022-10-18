@@ -12,7 +12,7 @@ def decode(options):
     for opt, arg in options:
         if opt in ('-d', '--data'):
             data = arg
-    
+
     if data == None:
         print("请输入数据")
         return
@@ -29,6 +29,8 @@ def encode(options):
     output = 'terminal'  # terminal file
     filename = None
     outputdir = None
+    backColor = "black"
+    fillColor = "white"
 
     qr = QRCode(None, 1)
 
@@ -41,6 +43,10 @@ def encode(options):
             output = arg
         elif opt in ('-f', '--filename'):
             filename = arg
+        elif opt == '--backcolor':
+            backColor = arg
+        elif opt == '--fillcolor':
+            fillColor = arg
         elif opt in '--outputdir':
             outputdir = arg
 
@@ -65,14 +71,15 @@ def encode(options):
         if not os.path.exists(outputdir):
             os.makedirs(outputdir)
 
-        qr.makeImage(filename, outputdir, True)
+        qr.makeImage(filename, outputdir, True,
+                     backColor=backColor, fillColor=fillColor)
 
     print('编码成功')
 
 
 def main(argv):
     args = getopt.getopt(argv, "d:t:o:f:", [
-                         "encode", "decode", "web", "data=", "type=", "output=", "filename=", "outputdir="])
+                         "encode", "decode", "web", "data=", "type=", "output=", "filename=", "outputdir=", "backcolor=", "fillcolor="])
     options = args[0]
     if options[0][0] == "--encode":
         encode(options)

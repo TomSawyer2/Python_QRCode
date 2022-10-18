@@ -9,12 +9,13 @@
     "prettier": "^2.6.2",
     "react": "^18.0.0",
     "react-activation": "^0.11.2",
+    "react-color": "^2.19.3",
     "react-dom": "^18.0.0",
     "react-router-dom": "^6.3.0",
     "react-scripts": "5.0.0",
+    "umi": "^3.5.23",
     "web-vitals": "^2.1.4",
-    "webpack-merge": "^5.8.0",
-    "umi": "^3.5.23"
+    "webpack-merge": "^5.8.0"
   },
   "scripts": {
     "dev": "umi dev",
@@ -47,6 +48,7 @@
     "@types/antd": "^1.0.0",
     "@types/react": "^18.0.10",
     "@types/react-dom": "^18.0.5",
+    "@umijs/preset-react": "1.x",
     "add-asset-html-webpack-plugin": "^5.0.2",
     "babel-core": "^7.0.0-bridge.0",
     "babel-loader": "^7.1.5",
@@ -66,7 +68,6 @@
     "mini-css-extract-plugin": "^2.6.0",
     "path": "^0.12.7",
     "postcss-loader": "^7.0.0",
-    "@umijs/preset-react": "1.x",
     "regenerator-runtime": "^0.13.9",
     "sass-loader": "^10",
     "style-loader": "^3.3.1",

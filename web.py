@@ -45,6 +45,8 @@ def index():
 """
 POST /api/encode
 :param: data 要编码的数据
+:param: backColor 背景色
+:param: fillColor 前景色
 """
 
 
@@ -52,19 +54,21 @@ POST /api/encode
 def decodeService():
     req = request.get_json()
     data = req.get("data")
+    backColor = req.get("backColor") or "#FFFFFF"
+    fillColor = req.get("fillColor") or "#000000"
     if data is None:
         return responseConstructor(1, "data is None", None)
     qr = QRCode(None, 1)
     qr.addData(data)
     now = int(time.time())
     fileName = 'output-' + str(now) + '.png'
-    im = qr.makeImage(fileName, "", False)
+    im = qr.makeImage(fileName, "", False, backColor=backColor, fillColor=fillColor)
     fileRoute = 'qrcode/assets/' + fileName
     im.save(fileRoute)
     with open(fileRoute, 'rb') as f:
         data = f.read()
         data = base64.b64encode(data).decode('utf-8')
-        return responseConstructor(0, "解码成功", data)
+        return responseConstructor(0, "编码成功", data)
 
 
 """

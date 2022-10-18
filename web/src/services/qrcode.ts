@@ -2,6 +2,8 @@ import axios from '@/utils/axios';
 
 export interface EncodeQRCodeParams {
   data: string;
+  backColor?: string;
+  fillColor?: string;
 }
 
 export interface DecodeQRCodeParams {

@@ -3,9 +3,9 @@ import { Button, Col, Input, message, Row, Spin, Tooltip, Upload } from 'antd';
 
 import HeaderBar from '@/components/HeaderBar';
 import { decodeQRCode, encodeQRCode } from '@/services/qrcode';
+import { saveImg } from '@/utils/saveImg';
 
 import './index.less';
-import { saveImg } from '@/utils/saveImg';
 
 const Page: React.FC = () => {
   const [encodeData, setEncodeData] = useState<string>('');
@@ -15,6 +15,9 @@ const Page: React.FC = () => {
   const [decodeInput, setDecodeInput] = useState<string>('');
   const [decodeOutput, setDecodeOutput] = useState<string>('');
   const [decodeLoading, setDecodeLoading] = useState<boolean>(false);
+
+  // const [backColor, setBackColor] = useState<string>('#ffffff');
+  // const [fillColor, setFillColor] = useState<string>('#000000');
 
   const checkBeforeUpload = async (file: File) => {
     const isJPG = file.type === 'image/jpeg';
