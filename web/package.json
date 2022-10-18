@@ -47,6 +47,7 @@
     "@babel/eslint-parser": "^7.18.2",
     "@types/antd": "^1.0.0",
     "@types/react": "^18.0.10",
+    "@types/react-color": "^3.0.6",
     "@types/react-dom": "^18.0.5",
     "@umijs/preset-react": "1.x",
     "add-asset-html-webpack-plugin": "^5.0.2",

@@ -4,6 +4,7 @@ import { Button, Col, Input, message, Row, Spin, Tooltip, Upload } from 'antd';
 import HeaderBar from '@/components/HeaderBar';
 import { decodeQRCode, encodeQRCode } from '@/services/qrcode';
 import { saveImg } from '@/utils/saveImg';
+import ColorPicker from '@/components/ColorPicker/ColorPicker';
 
 import './index.less';
 
@@ -16,8 +17,8 @@ const Page: React.FC = () => {
   const [decodeOutput, setDecodeOutput] = useState<string>('');
   const [decodeLoading, setDecodeLoading] = useState<boolean>(false);
 
-  // const [backColor, setBackColor] = useState<string>('#ffffff');
-  // const [fillColor, setFillColor] = useState<string>('#000000');
+  const [backColor, setBackColor] = useState<string>('#ffffff');
+  const [fillColor, setFillColor] = useState<string>('#000000');
 
   const checkBeforeUpload = async (file: File) => {
     const isJPG = file.type === 'image/jpeg';
@@ -46,7 +47,7 @@ const Page: React.FC = () => {
   const handleEncode = async () => {
     setEncodeLoading(true);
     try {
-      const data = await encodeQRCode({ data: encodeData });
+      const data = await encodeQRCode({ data: encodeData, backColor, fillColor });
       setEncodeImg(`data:image/png;base64,${data}`);
       message.success('生成成功');
     } catch (err) {
@@ -87,8 +88,25 @@ const Page: React.FC = () => {
               allowClear
               className="encode-input"
               placeholder="请输入要编码的内容"
+              autoSize={{ minRows: 4, maxRows: 4 }}
               onChange={(e) => setEncodeData(e.target.value)}
             />
+            <div className="color-group">
+              <div className="color-box">
+                <span>背景色</span>
+                <ColorPicker
+                  color={backColor}
+                  onChange={(e) => setBackColor(e)}
+                />
+              </div>
+              <div className="color-box">
+                <span>填充色</span>
+                <ColorPicker
+                  color={fillColor}
+                  onChange={(e) => setFillColor(e)}
+                />
+              </div>
+            </div>
             <div className="encode-img">
               {encodeImg === '' ? (
                 <div className="empty-img-box">{encodeLoading && <Spin />}</div>
