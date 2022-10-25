@@ -1,0 +1,5 @@
+Pillow
+requests
+pyzbar
+flask
+flask_cors

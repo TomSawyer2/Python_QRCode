@@ -2,11 +2,15 @@
 
 ## 简介
 
-Python实现的二维码编解码功能
+Python实现的二维码编解码功能 [TomSawyer2@GitHub](https://github.com/TomSawyer2)
 
 ## 使用
 
-**根据系统运行`init.bat`或`init.sh`脚本安装相关依赖**
+### Pre
+
+```bash
+pip install -r requirements.txt
+```
 
 ### 一、命令行模式
 
@@ -15,24 +19,25 @@ Python实现的二维码编解码功能
 ```bash
 python main.py --encode --data="Hello World"
 python main.py --encode -d "Hello World!" -o file --outputdir=./ -f "HelloWorld.png"
-python main.py --encode -d .gitignore -o file --outputdir=./ -f "gitignore.png" -t file
 python main.py --encode -d README.md -o file --outputdir=./ -f "README.png" -t file
+python main.py --encode -d .gitignore -o file --outputdir=./ -f "gitignore.png" -t file --backcolor=white --fillcolor="#66ccff"
 ```
 
 参数说明（加粗代表必须有）：
 **`-d/--data`**: 需要编码的数据，可以是字符串，也可以是文件路径
 `-t/--type`: 输入的类型，`text`或`file`，默认为字符串
 `-o/--output`: 二维码输出类型，`file`或`terminal`，默认为终端输出
-`-f/--filename`: 输出文件名，包含后缀，默认为`output-当前时间戳.png`
 `--outputdir`: 输出文件夹，格式为`./path/to/dir/`，默认为`./qrcode/assets/`
+`-f/--filename`: 输出文件名，包含后缀，默认为`output-当前时间戳.png`
 `--backcolor`: 背景色，可以是颜色英语，也可以是十六进制数据，默认为白色
 `--fillcolor`: 填充色，可以是颜色英语，也可以是十六进制数据，默认为黑色
 
 #### 解码
 
 ```bash
-python main.py --decode --data="qrcode/assets/input.png"
+python main.py --decode --data="qrcode/assets/githubQRCode.png"
 python main.py --decode --data="README.png"
+python main.py --decode --data="qrcode/assets/githubQRCode.png, https://cdn.tomsawyer2.xyz/pics/githubQRCode.png"
 ```
 
 参数说明（加粗代表必须有）：
@@ -46,6 +51,8 @@ python main.py --decode --data="README.png"
 ```bash
 python main.py --web
 ```
+
+浏览器中打开127.0.0.1:5000
 
 ### 三、插件模式
 
@@ -66,11 +73,11 @@ python main.py --web
 - [x] 通过本地图片文件解析
 - [x] 通过网络图片的URL解析
 - [x] 批量解码
-- [ ] 依赖替换
+- [x] 依赖替换
 
 ### 杂项
 
-- [ ] WebUI
+- [x] WebUI
 - [x] 集成函数
 - [ ] 单元测试
 - [ ] 编码文档

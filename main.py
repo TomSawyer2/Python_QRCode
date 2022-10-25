@@ -28,9 +28,9 @@ def encode(options):
     data = None
     output = 'terminal'  # terminal file
     filename = None
-    outputdir = None
-    backColor = "black"
-    fillColor = "white"
+    outputdir = 'qrcode/assets/'
+    backColor = "white"
+    fillColor = "black"
 
     qr = QRCode(None, 1)
 
